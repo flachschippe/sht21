@@ -10,7 +10,25 @@
 #define I2C_MASTER_TX_BUF_DISABLE 0
 #define I2C_TIMEOUT_MS 200
 
+/* See Datasheet Page 8 Table 6 */
+// clang-format off
+#define SHT21_CMD_TRIG_T_MEASUREMENT_HM   0xE3 // command trig. temp meas. hold master
+#define SHT21_CMD_TRIG_RH_MEASUREMENT_HM  0xE5 // command trig. humidity meas. hold master
+#define SHT21_CMD_TRIG_T_MEASUREMENT_NHM  0xF3 // command trig. temp meas. no hold master
+#define SHT21_CMD_TRIG_RH_MEASUREMENT_NHM 0xF5 // command trig. humid. meas. no hold master
+// clang-format on
+
+// TODO LORIS: rename struct? or just get rid of it
+typedef struct
+{
+    uint16_t data;
+    // TODO LORIS: should just return a bool for checksum passed?
+    uint8_t checksum;
+} sensor_raw_value_t;
+
 static i2c_port_t i2c_port;
+static esp_err_t read_sensor(uint8_t command,
+                             sensor_raw_value_t *sensor_raw_value);
 
 esp_err_t sht21_init(i2c_port_t i2c_num, gpio_num_t sda_pin, gpio_num_t scl_pin,
                      sht21_i2c_speed_t i2c_speed)
@@ -34,7 +52,7 @@ esp_err_t sht21_init(i2c_port_t i2c_num, gpio_num_t sda_pin, gpio_num_t scl_pin,
 esp_err_t sht21_get_temperature(float *ans)
 {
     sensor_raw_value_t value;
-    RE(sht21_read_sensor(TRIG_T_MEASUREMENT_NHM, &value));
+    RE(read_sensor(SHT21_CMD_TRIG_T_MEASUREMENT_NHM, &value));
     *ans = (float)value.data;
     return ESP_OK;
 }
@@ -42,14 +60,13 @@ esp_err_t sht21_get_temperature(float *ans)
 esp_err_t sht21_get_humidity(float *ans)
 {
     sensor_raw_value_t value;
-    RE(sht21_read_sensor(TRIG_RH_MEASUREMENT_NHM, &value));
+    RE(read_sensor(SHT21_CMD_TRIG_RH_MEASUREMENT_NHM, &value));
     *ans = (float)value.data;
     return ESP_OK;
 }
 
-// TODO LORIS: static read_sensor()
-esp_err_t sht21_read_sensor(sht21_command_t command,
-                            sensor_raw_value_t *sensor_raw_value)
+static esp_err_t read_sensor(uint8_t command,
+                             sensor_raw_value_t *sensor_raw_value)
 {
     uint8_t data_msb;
     uint8_t data_lsb;
