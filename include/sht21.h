@@ -32,4 +32,8 @@ esp_err_t sht21_init(i2c_port_t i2c_port, gpio_num_t sda_pin,
                      gpio_num_t scl_pin, sht21_i2c_speed_t i2c_speed);
 
 esp_err_t sht21_read_sensor(sht21_command_t command,
-                      sensor_raw_value_t *sensor_raw_value);
+                            sensor_raw_value_t *sensor_raw_value);
+
+esp_err_t sht21_get_temp(float *ans);
+
+esp_err_t sht21_get_rh(float *ans);

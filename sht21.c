@@ -31,6 +31,22 @@ esp_err_t sht21_init(i2c_port_t i2c_num, gpio_num_t sda_pin, gpio_num_t scl_pin,
     return ESP_OK;
 }
 
+esp_err_t sht21_get_temp(float *ans)
+{
+    sensor_raw_value_t value;
+    RE(sht21_read_sensor(TRIG_T_MEASUREMENT_NHM, &value));
+    *ans = (float)value.data;
+    return ESP_OK;
+}
+
+esp_err_t sht21_get_rh(float *ans)
+{
+    sensor_raw_value_t value;
+    RE(sht21_read_sensor(TRIG_RH_MEASUREMENT_NHM, &value));
+    *ans = (float)value.data;
+    return ESP_OK;
+}
+
 // TODO LORIS: static read_sensor()
 esp_err_t sht21_read_sensor(sht21_command_t command,
                             sensor_raw_value_t *sensor_raw_value)
