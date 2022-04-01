@@ -1,18 +1,30 @@
+//==============================================================================
+// INCLUDES
+//==============================================================================
+
 #include "sht21.h"
 #include "driver/gpio.h"
 #include "driver/i2c.h"
 #include "esp_check.h"
 
-#define ER(x) ESP_RETURN_ON_ERROR(x, __FILE__, "")
+//==============================================================================
+// DEFINES - MACROS
+//==============================================================================
 
 #define I2C_ADDRESS 0x40
 #define I2C_MASTER_RX_BUF_DISABLE 0
 #define I2C_MASTER_TX_BUF_DISABLE 0
 #define I2C_TIMEOUT_MS 200
 
-/* See Datasheet Page 8 Table 6 */
+#define ER(x) ESP_RETURN_ON_ERROR(x, __FILE__, "")
+
+//==============================================================================
+// TYPEDEFS
+//==============================================================================
+
 // clang-format off
 typedef enum {
+    /* See Datasheet Page 8 Table 6 */
     SHT21_CMD_TRIG_T_MEASUREMENT_HM   = 0xE3, // command trig. temp meas. hold master
     SHT21_CMD_TRIG_RH_MEASUREMENT_HM  = 0xE5, // command trig. humidity meas. hold master
     SHT21_CMD_TRIG_T_MEASUREMENT_NHM  = 0xF3, // command trig. temp meas. no hold master
@@ -28,9 +40,18 @@ typedef struct
     uint8_t checksum;
 } sensor_raw_value_t;
 
+//==============================================================================
+// STATIC VARIABLES - STATIC PROTOTYPES
+//==============================================================================
+
 static i2c_port_t i2c_port;
+
 static esp_err_t read_sensor(sht21_command_t command,
                              sensor_raw_value_t *sensor_raw_value);
+
+//==============================================================================
+// GLOBAL FUNCTIONS
+//==============================================================================
 
 esp_err_t sht21_init(i2c_port_t i2c_num, gpio_num_t sda_pin, gpio_num_t scl_pin,
                      sht21_i2c_speed_t i2c_speed)
@@ -66,6 +87,10 @@ esp_err_t sht21_get_humidity(float *ans)
     *ans = (float)value.data;
     return ESP_OK;
 }
+
+//==============================================================================
+// STATIC FUNCTIONS
+//==============================================================================
 
 static esp_err_t read_sensor(sht21_command_t command,
                              sensor_raw_value_t *sensor_raw_value)
