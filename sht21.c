@@ -12,10 +12,12 @@
 
 /* See Datasheet Page 8 Table 6 */
 // clang-format off
-#define SHT21_CMD_TRIG_T_MEASUREMENT_HM   0xE3 // command trig. temp meas. hold master
-#define SHT21_CMD_TRIG_RH_MEASUREMENT_HM  0xE5 // command trig. humidity meas. hold master
-#define SHT21_CMD_TRIG_T_MEASUREMENT_NHM  0xF3 // command trig. temp meas. no hold master
-#define SHT21_CMD_TRIG_RH_MEASUREMENT_NHM 0xF5 // command trig. humid. meas. no hold master
+typedef enum {
+    SHT21_CMD_TRIG_T_MEASUREMENT_HM   = 0xE3, // command trig. temp meas. hold master
+    SHT21_CMD_TRIG_RH_MEASUREMENT_HM  = 0xE5, // command trig. humidity meas. hold master
+    SHT21_CMD_TRIG_T_MEASUREMENT_NHM  = 0xF3, // command trig. temp meas. no hold master
+    SHT21_CMD_TRIG_RH_MEASUREMENT_NHM = 0xF5, // command trig. humid. meas. no hold master
+} sht21_command_t;
 // clang-format on
 
 // TODO LORIS: rename struct? or just get rid of it
@@ -27,7 +29,7 @@ typedef struct
 } sensor_raw_value_t;
 
 static i2c_port_t i2c_port;
-static esp_err_t read_sensor(uint8_t command,
+static esp_err_t read_sensor(sht21_command_t command,
                              sensor_raw_value_t *sensor_raw_value);
 
 esp_err_t sht21_init(i2c_port_t i2c_num, gpio_num_t sda_pin, gpio_num_t scl_pin,
@@ -65,7 +67,7 @@ esp_err_t sht21_get_humidity(float *ans)
     return ESP_OK;
 }
 
-static esp_err_t read_sensor(uint8_t command,
+static esp_err_t read_sensor(sht21_command_t command,
                              sensor_raw_value_t *sensor_raw_value)
 {
     uint8_t data_msb;
