@@ -84,6 +84,12 @@ esp_err_t sht21_get_humidity(float *dst)
     return ESP_OK;
 }
 
+esp_err_t sht21_deinit(void)
+{
+    ER(i2c_driver_delete(i2c_port));
+    return ESP_OK;
+}
+
 //==============================================================================
 // STATIC FUNCTIONS
 //==============================================================================
