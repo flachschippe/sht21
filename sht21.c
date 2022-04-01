@@ -42,7 +42,7 @@ static i2c_port_t i2c_port;
 
 static esp_err_t read_sensor(uint16_t *dst, sht21_command_t command);
 
-static esp_err_t crc_checksum(uint8_t data[], uint8_t data_len,
+static esp_err_t crc_checksum(uint8_t data_arr[], uint8_t data_len,
                               uint8_t checksum);
 
 //==============================================================================
@@ -90,8 +90,7 @@ esp_err_t sht21_get_humidity(float *dst)
 
 static esp_err_t read_sensor(uint16_t *dst, sht21_command_t command)
 {
-    uint8_t data_msb;
-    uint8_t data_lsb;
+    uint8_t data_arr[2];
     uint8_t checksum;
     esp_err_t err = ESP_OK;
 
@@ -115,8 +114,7 @@ static esp_err_t read_sensor(uint16_t *dst, sht21_command_t command)
     ER(i2c_master_start(read_cmd));
     ER(i2c_master_write_byte(read_cmd, (I2C_ADDRESS << 1) | I2C_MASTER_READ,
                              I2C_MASTER_ACK));
-    ER(i2c_master_read_byte(read_cmd, &data_msb, I2C_MASTER_ACK));
-    ER(i2c_master_read_byte(read_cmd, &data_lsb, I2C_MASTER_ACK));
+    ER(i2c_master_read(read_cmd, data_arr, sizeof(data_arr), I2C_MASTER_ACK));
     ER(i2c_master_read_byte(read_cmd, &checksum, I2C_MASTER_NACK));
     ER(i2c_master_stop(read_cmd));
 
@@ -125,24 +123,21 @@ static esp_err_t read_sensor(uint16_t *dst, sht21_command_t command)
     i2c_cmd_link_delete(read_cmd);
     ER(err);
 
-    // TODO LORIS: get rid of this array
-    uint8_t data_arr[] = {data_msb, data_lsb};
     ER(crc_checksum(data_arr, sizeof(data_arr), checksum));
 
-    uint16_t data = data_msb << 8;
-    data |= data_lsb;
-    *dst = data;
+    // The last two bits are used for transmitting status. See Datasheet Page 8
+    *dst = (data_arr[0] << 8) | (data_arr[1] & 0xFC);
     return ESP_OK;
 }
 
 // calculates 8-Bit checksum with given polynomial
-static esp_err_t crc_checksum(uint8_t data[], uint8_t data_len,
+static esp_err_t crc_checksum(uint8_t data_arr[], uint8_t data_len,
                               uint8_t checksum)
 {
     uint8_t crc = 0;
     for (uint8_t byte_ctr = 0; byte_ctr < data_len; ++byte_ctr)
     {
-        crc ^= (data[byte_ctr]);
+        crc ^= (data_arr[byte_ctr]);
         for (uint8_t bit = 8; bit > 0; --bit)
         {
             if (crc & 0x80)
