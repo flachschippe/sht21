@@ -16,6 +16,9 @@
 #define I2C_MASTER_TX_BUF_DISABLE 0
 #define I2C_TIMEOUT_MS 200
 
+// See Datasheet Page 9 Section 5.7
+#define CRC_POLYNOMIAL 0x131 // P(x) = x^8 + x^5 + x^4 + 1 = 100110001
+
 #define ER(x) ESP_RETURN_ON_ERROR(x, __FILE__, "")
 
 //==============================================================================
@@ -24,12 +27,11 @@
 
 // clang-format off
 typedef enum {
-    /* See Datasheet Page 8 Table 6 */
     SHT21_CMD_TRIG_T_MEASUREMENT_HM   = 0xE3, // command trig. temp meas. hold master
     SHT21_CMD_TRIG_RH_MEASUREMENT_HM  = 0xE5, // command trig. humidity meas. hold master
     SHT21_CMD_TRIG_T_MEASUREMENT_NHM  = 0xF3, // command trig. temp meas. no hold master
     SHT21_CMD_TRIG_RH_MEASUREMENT_NHM = 0xF5, // command trig. humid. meas. no hold master
-} sht21_command_t;
+} sht21_command_t; /* See Datasheet Page 8 Table 6 */
 // clang-format on
 
 // TODO LORIS: rename struct? or just get rid of it
@@ -48,6 +50,9 @@ static i2c_port_t i2c_port;
 
 static esp_err_t read_sensor(sht21_command_t command,
                              sensor_raw_value_t *sensor_raw_value);
+
+static esp_err_t crc_checksum(uint8_t data[], uint8_t data_size,
+                              uint8_t checksum);
 
 //==============================================================================
 // GLOBAL FUNCTIONS
@@ -134,5 +139,33 @@ static esp_err_t read_sensor(sht21_command_t command,
     data |= data_lsb;
     sensor_raw_value->data = data;
     sensor_raw_value->checksum = checksum;
+
+    // TODO LORIS: get rid of this array
+    uint8_t data_arr[] = {data_msb, data_lsb};
+
+    ER(crc_checksum(data_arr, sizeof(data_arr), checksum));
     return ESP_OK;
+}
+
+// calculates 8-Bit checksum with given polynomial
+static esp_err_t crc_checksum(uint8_t data[], uint8_t data_size,
+                              uint8_t checksum)
+{
+    uint8_t crc = 0;
+    for (uint8_t byte_ctr = 0; byte_ctr < data_size; ++byte_ctr)
+    {
+        crc ^= (data[byte_ctr]);
+        for (uint8_t bit = 8; bit > 0; --bit)
+        {
+            if (crc & 0x80)
+                crc = (crc << 1) ^ CRC_POLYNOMIAL;
+            else
+                crc = (crc << 1);
+        }
+    }
+
+    if (crc != checksum)
+        return ESP_ERR_INVALID_CRC;
+    else
+        return ESP_OK;
 }
