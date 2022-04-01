@@ -72,7 +72,7 @@ esp_err_t sht21_get_temperature(float *dst)
 {
     uint16_t raw_reading;
     ER(read_sensor(&raw_reading, SHT21_CMD_TRIG_T_MEASUREMENT_NHM));
-    *dst = (float)raw_reading;
+    *dst = -46.85 + 175.72 / 65536 * (float)raw_reading; // Datasheet Page 10
     return ESP_OK;
 }
 
@@ -80,7 +80,7 @@ esp_err_t sht21_get_humidity(float *dst)
 {
     uint16_t raw_reading;
     ER(read_sensor(&raw_reading, SHT21_CMD_TRIG_RH_MEASUREMENT_NHM));
-    *dst = (float)raw_reading;
+    *dst = -6.0 + 125.0 / 65536 * (float)raw_reading; // Datasheet Page 10
     return ESP_OK;
 }
 
