@@ -34,24 +34,15 @@ typedef enum {
 } sht21_command_t; /* See Datasheet Page 8 Table 6 */
 // clang-format on
 
-// TODO LORIS: rename struct? or just get rid of it
-typedef struct
-{
-    uint16_t data;
-    // TODO LORIS: should just return a bool for checksum passed?
-    uint8_t checksum;
-} sensor_raw_value_t;
-
 //==============================================================================
 // STATIC VARIABLES - STATIC PROTOTYPES
 //==============================================================================
 
 static i2c_port_t i2c_port;
 
-static esp_err_t read_sensor(sht21_command_t command,
-                             sensor_raw_value_t *sensor_raw_value);
+static esp_err_t read_sensor(uint16_t *dst, sht21_command_t command);
 
-static esp_err_t crc_checksum(uint8_t data[], uint8_t data_size,
+static esp_err_t crc_checksum(uint8_t data[], uint8_t data_len,
                               uint8_t checksum);
 
 //==============================================================================
@@ -77,19 +68,19 @@ esp_err_t sht21_init(i2c_port_t i2c_num, gpio_num_t sda_pin, gpio_num_t scl_pin,
     return ESP_OK;
 }
 
-esp_err_t sht21_get_temperature(float *ans)
+esp_err_t sht21_get_temperature(float *dst)
 {
-    sensor_raw_value_t value;
-    ER(read_sensor(SHT21_CMD_TRIG_T_MEASUREMENT_NHM, &value));
-    *ans = (float)value.data;
+    uint16_t raw_reading;
+    ER(read_sensor(&raw_reading, SHT21_CMD_TRIG_T_MEASUREMENT_NHM));
+    *dst = (float)raw_reading;
     return ESP_OK;
 }
 
-esp_err_t sht21_get_humidity(float *ans)
+esp_err_t sht21_get_humidity(float *dst)
 {
-    sensor_raw_value_t value;
-    ER(read_sensor(SHT21_CMD_TRIG_RH_MEASUREMENT_NHM, &value));
-    *ans = (float)value.data;
+    uint16_t raw_reading;
+    ER(read_sensor(&raw_reading, SHT21_CMD_TRIG_RH_MEASUREMENT_NHM));
+    *dst = (float)raw_reading;
     return ESP_OK;
 }
 
@@ -97,8 +88,7 @@ esp_err_t sht21_get_humidity(float *ans)
 // STATIC FUNCTIONS
 //==============================================================================
 
-static esp_err_t read_sensor(sht21_command_t command,
-                             sensor_raw_value_t *sensor_raw_value)
+static esp_err_t read_sensor(uint16_t *dst, sht21_command_t command)
 {
     uint8_t data_msb;
     uint8_t data_lsb;
@@ -135,24 +125,22 @@ static esp_err_t read_sensor(sht21_command_t command,
     i2c_cmd_link_delete(read_cmd);
     ER(err);
 
-    uint16_t data = data_msb << 8;
-    data |= data_lsb;
-    sensor_raw_value->data = data;
-    sensor_raw_value->checksum = checksum;
-
     // TODO LORIS: get rid of this array
     uint8_t data_arr[] = {data_msb, data_lsb};
-
     ER(crc_checksum(data_arr, sizeof(data_arr), checksum));
+
+    uint16_t data = data_msb << 8;
+    data |= data_lsb;
+    *dst = data;
     return ESP_OK;
 }
 
 // calculates 8-Bit checksum with given polynomial
-static esp_err_t crc_checksum(uint8_t data[], uint8_t data_size,
+static esp_err_t crc_checksum(uint8_t data[], uint8_t data_len,
                               uint8_t checksum)
 {
     uint8_t crc = 0;
-    for (uint8_t byte_ctr = 0; byte_ctr < data_size; ++byte_ctr)
+    for (uint8_t byte_ctr = 0; byte_ctr < data_len; ++byte_ctr)
     {
         crc ^= (data[byte_ctr]);
         for (uint8_t bit = 8; bit > 0; --bit)
