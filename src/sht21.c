@@ -6,15 +6,23 @@
 #include "driver/gpio.h"
 #include "driver/i2c.h"
 #include "esp_check.h"
+#include <assert.h>
 
 //==============================================================================
 // DEFINES - MACROS
 //==============================================================================
 
-#define I2C_ADDRESS 0x40
-#define I2C_MASTER_RX_BUF_DISABLE 0
-#define I2C_MASTER_TX_BUF_DISABLE 0
-#define I2C_TIMEOUT_MS 200
+#define I2C_ADDRESS 0x40            // i2c address of SHT21
+#define I2C_MASTER_RX_BUF_DISABLE 0 // receiving buffer size
+#define I2C_MASTER_TX_BUF_DISABLE 0 // sending buffer size
+#define I2C_TIMEOUT_MS 200 // max waiting time before issuing an i2c timeout
+
+// See Datasheet Page 9 Table 7
+#define SHT21_DELAY_T_MEASUREMENT 85  // max delay for temp meas. in ms
+#define SHT21_DELAY_RH_MEASUREMENT 29 // max delay for humidity meas. in ms
+
+// See Datasheet Page 9 Section 5.5
+#define SHT21_DELAY_SOFT_RESET 15 // max delay for soft reset
 
 // See Datasheet Page 9 Section 5.7
 #define CRC_POLYNOMIAL 0x131 // P(x) = x^8 + x^5 + x^4 + 1 = 100110001
@@ -40,6 +48,8 @@ typedef enum {
 //==============================================================================
 
 static i2c_port_t i2c_port;
+
+static TickType_t get_delay_for_measurement(sht21_command_t command);
 
 static esp_err_t read_sensor(uint16_t *dst, sht21_command_t command);
 
@@ -99,8 +109,7 @@ esp_err_t sht21_soft_reset(void)
     i2c_cmd_link_delete(write_cmd);
     ER(err);
 
-    // TODO LORIS: #define reset_wait_time
-    vTaskDelay(15 / portTICK_PERIOD_MS);
+    vTaskDelay(SHT21_DELAY_SOFT_RESET / portTICK_PERIOD_MS);
     return ESP_OK;
 }
 
@@ -113,6 +122,21 @@ esp_err_t sht21_deinit(void)
 //==============================================================================
 // STATIC FUNCTIONS
 //==============================================================================
+
+static TickType_t get_delay_for_measurement(sht21_command_t command)
+{
+    switch (command)
+    {
+    case SHT21_CMD_TRIG_T_MEASUREMENT_HM:
+    case SHT21_CMD_TRIG_T_MEASUREMENT_NHM:
+        return SHT21_DELAY_T_MEASUREMENT;
+    case SHT21_CMD_TRIG_RH_MEASUREMENT_HM:
+    case SHT21_CMD_TRIG_RH_MEASUREMENT_NHM:
+        return SHT21_DELAY_RH_MEASUREMENT;
+    default:
+        assert(0);
+    }
+}
 
 static esp_err_t read_sensor(uint16_t *dst, sht21_command_t command)
 {
@@ -132,9 +156,7 @@ static esp_err_t read_sensor(uint16_t *dst, sht21_command_t command)
     i2c_cmd_link_delete(write_cmd);
     ER(err);
 
-    // TODO LORIS: change delay based on temperature or humidity
-    //   datasheet page 9
-    vTaskDelay(85 / portTICK_PERIOD_MS);
+    vTaskDelay(get_delay_for_measurement(command) / portTICK_PERIOD_MS);
 
     i2c_cmd_handle_t read_cmd = i2c_cmd_link_create();
     ER(i2c_master_start(read_cmd));
@@ -156,7 +178,7 @@ static esp_err_t read_sensor(uint16_t *dst, sht21_command_t command)
     return ESP_OK;
 }
 
-// calculates 8-Bit checksum with given polynomial
+// Calculates 8-Bit checksum with given polynomial
 static esp_err_t crc_checksum(uint8_t data_arr[], uint8_t data_len,
                               uint8_t checksum)
 {

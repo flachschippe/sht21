@@ -15,7 +15,3 @@ git clone https://github.com/dehre/sht21
 ## Usage
 
 See `examples` directory
-
-## Todos
-
-- fix todos
