@@ -41,6 +41,13 @@ esp_err_t sht21_get_temperature(float *dst);
 esp_err_t sht21_get_humidity(float *dst);
 
 /**
+ * @brief Perform a reset without switching the power off and on again.
+ *
+ * @return esp_err_t
+ */
+esp_err_t sht21_soft_reset(void);
+
+/**
  * @brief Release the allocated I2C resources.
  *
  * @return esp_err_t

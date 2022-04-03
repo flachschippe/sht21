@@ -18,10 +18,6 @@ See `examples` directory
 
 ## Todos
 
-- fn get_serial_number
-
-- fn soft_reset
-
 - 2 examples, one w/ error checking and one w/o
 
 - fix todos

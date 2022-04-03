@@ -31,6 +31,7 @@ typedef enum {
     SHT21_CMD_TRIG_RH_MEASUREMENT_HM  = 0xE5, // command trig. humidity meas. hold master
     SHT21_CMD_TRIG_T_MEASUREMENT_NHM  = 0xF3, // command trig. temp meas. no hold master
     SHT21_CMD_TRIG_RH_MEASUREMENT_NHM = 0xF5, // command trig. humid. meas. no hold master
+    SHT21_CMD_SOFT_RESET              = 0xFE  // command soft reset
 } sht21_command_t; /* See Datasheet Page 8 Table 6 */
 // clang-format on
 
@@ -81,6 +82,25 @@ esp_err_t sht21_get_humidity(float *dst)
     uint16_t raw_reading;
     ER(read_sensor(&raw_reading, SHT21_CMD_TRIG_RH_MEASUREMENT_NHM));
     *dst = -6.0 + 125.0 / 65536 * (float)raw_reading; // Datasheet Page 10
+    return ESP_OK;
+}
+
+esp_err_t sht21_soft_reset(void)
+{
+    i2c_cmd_handle_t write_cmd = i2c_cmd_link_create();
+    ER(i2c_master_start(write_cmd));
+    ER(i2c_master_write_byte(write_cmd, (I2C_ADDRESS << 1) | I2C_MASTER_WRITE,
+                             I2C_MASTER_ACK));
+    ER(i2c_master_write_byte(write_cmd, SHT21_CMD_SOFT_RESET, I2C_MASTER_ACK));
+    ER(i2c_master_stop(write_cmd));
+
+    esp_err_t err = i2c_master_cmd_begin(i2c_port, write_cmd,
+                                         I2C_TIMEOUT_MS / portTICK_RATE_MS);
+    i2c_cmd_link_delete(write_cmd);
+    ER(err);
+
+    // TODO LORIS: #define reset_wait_time
+    vTaskDelay(15 / portTICK_PERIOD_MS);
     return ESP_OK;
 }
 
