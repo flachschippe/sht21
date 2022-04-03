@@ -1,2 +1,2 @@
-idf_component_register(SRCS "sht21.c"
+idf_component_register(SRCS "src/sht21.c"
                     INCLUDE_DIRS "include")
