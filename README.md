@@ -18,6 +18,4 @@ See `examples` directory
 
 ## Todos
 
-- 2 examples, one w/ error checking and one w/o
-
 - fix todos
