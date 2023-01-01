@@ -105,7 +105,7 @@ esp_err_t sht21_soft_reset(void)
     ER(i2c_master_stop(write_cmd));
 
     esp_err_t err = i2c_master_cmd_begin(i2c_port, write_cmd,
-                                         I2C_TIMEOUT_MS / portTICK_RATE_MS);
+                                         I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(write_cmd);
     ER(err);
 
@@ -152,7 +152,7 @@ static esp_err_t read_sensor(uint16_t *dst, sht21_command_t command)
     ER(i2c_master_stop(write_cmd));
 
     err = i2c_master_cmd_begin(i2c_port, write_cmd,
-                               I2C_TIMEOUT_MS / portTICK_RATE_MS);
+                               I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(write_cmd);
     ER(err);
 
@@ -167,7 +167,7 @@ static esp_err_t read_sensor(uint16_t *dst, sht21_command_t command)
     ER(i2c_master_stop(read_cmd));
 
     err = i2c_master_cmd_begin(i2c_port, read_cmd,
-                               I2C_TIMEOUT_MS / portTICK_RATE_MS);
+                               I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(read_cmd);
     ER(err);
 
